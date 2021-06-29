@@ -1,0 +1,257 @@
+\documentclass{article}
+
+\usepackage{polski}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{listings}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PYTHON %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Default fixed font does not support bold face
+\DeclareFixedFont{\ttb}{T1}{txtt}{bx}{n}{12} % for bold
+\DeclareFixedFont{\ttm}{T1}{txtt}{m}{n}{12}  % for normal
+
+% Custom colors
+\usepackage{color}
+\definecolor{deepblue}{rgb}{0,0,0.5}
+\definecolor{deepred}{rgb}{0.6,0,0}
+\definecolor{deepgreen}{rgb}{0,0.5,0}
+
+
+
+% Python style for highlighting
+\newcommand\pythonstyle{\lstset{
+language=Python,
+basicstyle=\ttm,
+morekeywords={self},              % Add keywords here
+keywordstyle=\ttb\color{deepblue},
+emph={MyClass,__init__},          % Custom highlighting
+emphstyle=\ttb\color{deepred},    % Custom highlighting style
+stringstyle=\color{deepgreen},
+frame=tb,                         % Any extra options here
+showstringspaces=false
+}}
+
+
+% Python environment
+\lstnewenvironment{python}[1][]
+{
+\pythonstyle
+\lstset{#1}
+}
+{}
+
+% Python for external files
+\newcommand\pythonexternal[2][]{{
+\pythonstyle
+\lstinputlisting[#1]{#2}}}
+
+% Python for inline
+\newcommand\pythoninline[1]{{\pythonstyle\lstinline!#1!}}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+
+
+
+\author{Marcin Kądziołka, Dominik Tekiela, Maksymilian Świętoń, Szymon Żur}
+\title{%
+  Problem producenta i konsumenta reprezentowany graficznie w czasie rzeczywistym \\
+  \large Systemy czasu rzeczywistego \\
+    Projekt 1}
+    
+    
+\begin{document}
+\maketitle
+
+\section{Opis projektu}
+
+\qquad Problem producenta i konsumenta to klasyczny informatyczny problem synchronizacji. W problemie występują dwa rodzaje procesów: producent i konsument, którzy dzielą wspólny zasób – bufor – dla produkowanych jednostek. Zadaniem producenta jest wytworzenie produktu, umieszczenie go w buforze i rozpoczęcie pracy od nowa. W tym samym czasie konsument ma pobrać produkt z bufora. Pierwszy problem może wystąpić, gdy producent i konsument będą próbowali uzyskać dostęp do tego samego miejsca w pamięci. Aby to rozwiązać, należy zabezpieczyć sekcję krytyczną tak, aby tylko jeden wątek miał do niej dostęp.
+
+Drugim problemem jest taka synchronizacja procesów, żeby producent nie dodawał nowych jednostek gdy bufor jest pełny, a konsument nie pobierał gdy bufor jest pusty. 
+Rozwiązaniem dla producenta jest uśpienie procesu producenta w momencie, gdy bufor jest pełny. Pierwszy konsument, który pobierze element z bufora budzi proces producenta, który uzupełnia bufor. W analogiczny sposób usypiany jest konsument próbujący pobrać z pustego bufora. Pierwszy producent, po dodaniu nowego produktu umożliwi dalsze działanie konsumentowi. Rozwiązanie wykorzystuje komunikację międzyprocesową z użyciem semaforów. Nieprawidłowa implementacja powyższego algorytmu może skutkować zakleszczeniem.
+
+Nasz projekt przedstawia rozwiązanie tego problemu w sposób graficzny, równocześnie z wykonywanym kodem. Celem jest ułatwienie zrozumienia tego problemu i możliwość analizy zachowań obu procesów.
+Zastosowaniem tego programu mogłoby być przedstawianie go uczniom i studentom na lekcjach dotyczących współbieżności. Pomogłoby to szybciej przyswoić koncepty synchronizacji. Program mógłby być dostarczany razem z kodem źródłowym, tak aby studenci mogli zakomentować sekcje synchronizacyjne w kodzie, w celu analizy problemów synchronizacyjnych. 
+
+
+\section{Kod źródłowy}
+
+Najważniejszym elementem kodu źródłowego są klasy producenta i konsumenta. Przedstawione poniżej są już poprawnie zsynchronizowane i to właśnie przebieg tego kodu można śledzić w programie.
+
+\begin{python}
+class ProducerThread(Thread):
+    def run(self):
+        global num
+        global buffer
+        
+        nums = range(10)
+        while True:
+        	# Zablokowanie dostepu innym watkom do sekcji
+            condition.acquire() 
+            
+            # Sprawdzenie, czy bufor jest zapelniony          
+            if len(buffer) == MAX_NUM:
+            	# Jesli jest, wstrzymanie watku, 
+            	# az do czasu otrzymania powiadomienia od 
+            	# konsumenta, o tym, ze pobral element 
+            	# i mozna dodac kolejny 
+                condition.wait() 
+            
+            # Produkowanie losowej liczby
+            num = random.choice(nums) 
+            
+            # Dodanie liczby do bufora
+            buffer.append(num) 
+            
+            # Powiadomienie konsumenta o tym, 
+            # ze w buforze znajduje sie produkt
+            condition.notify() 
+                              
+                              
+            # Zwolnienie dostepu do sekcji
+            condition.release() 
+            
+            time.sleep(random.random())
+
+\end{python}
+
+
+\newpage
+
+\begin{python}
+class ConsumerThread(Thread):
+    def run(self):
+        global buffer
+        while True:     
+        	# Zablokowanie dostepu innym watkom do sekcji                 
+            condition.acquire()
+           
+		# Sprawdzenie, czy bufor jest pusty
+            if not buffer:     
+            	# Jesli jest, wstrzymanie watku, 
+            	# az do czasu otrzymania powiadomienia od 
+            	# producenta, o tym, ze dodal element 
+            	# i mozna go pobrac         
+                condition.wait()
+                              
+            # Pobieranie elementu z bufora               
+            num = buffer.pop(0)
+                       
+            # Powiadomienie producenta o tym, 
+            # ze w buforze znajduje sie miejsce
+            condition.notify()
+            
+            # Zwolnienie dostepu do sekcji
+            condition.release()
+
+            time.sleep(random.random())
+
+\end{python}
+
+
+
+\section{Wygląd i funkcjonalność aplikacji}
+
+Poniżej przedstawione są zrzuty ekranu, obrazujące działanie aplikacji. Jest to kilka możliwych stanów, w których mogą znajdować się wątki producenta i konsumenta.
+
+\begin{figure}[H]
+\centering
+\caption{Pobieranie}
+\includegraphics[scale=0.36]{Screenshots/consuming.png}\\
+\begin{flushleft}
+\qquad Konsument przed chwilą pobrał zawartość z bufora i udaje się do góry, aby powiadomić o tym producenta.
+\end{flushleft}
+
+\caption{Produkowanie}
+\includegraphics[scale=0.36]{Screenshots/producing.png}\\
+\begin{flushleft}
+\qquad Producent znajduje się w strefie chronionej przez funkcję \pythoninline{condition.acquire()}, wyprodukował liczbę 3 i udaje się na miejsce drugie od góry, aby dodać ten produkt do bufora.
+\end{flushleft}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\caption{Producent powiadamia}
+\includegraphics[scale=0.36]{Screenshots/notify.png}\\
+\begin{flushleft}
+\qquad Producent dodał liczbę 3 na pierwsze miejsce bufora i powiadamia o tym konsumenta.
+\end{flushleft}
+
+\caption{Konsument czeka}
+\includegraphics[scale=0.36]{Screenshots/consumer_wait.png}\\
+\begin{flushleft}
+\qquad Konsument próbował pobrać produkt, ale bufor był pusty. Została uruchomiona funkcja \pythoninline{condition.wait()}, która zatrzyma ten wątek, aż do otrzymania powiadomienia od producenta. Funkcja ta zwalnia dostęp do zasobu, więc producent może "wejść" do bufora.
+\end{flushleft}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\caption{Producent czeka}
+\includegraphics[scale=0.36]{Screenshots/producer_wait.png}\\
+\begin{flushleft}
+\qquad Producent chciał dodać kolejny produkt do bufora, ale ten jest pełny.Została uruchomiona funkcja \pythoninline{condition.wait()}, która zatrzyma ten wątek, aż do otrzymania powiadomienia od konsumenta. Funkcja ta zwalnia dostęp do zasobu, więc konsument może "wejść" do bufora.
+\end{flushleft}
+
+\caption{Producent powiadamia konsumenta}
+\includegraphics[scale=0.36]{Screenshots/consumer_wait_notify.png}\\
+\begin{flushleft}
+\qquad Producent właśnie dodał element do pustego bufora i powiadamia o tym konsumenta, który został zatrzymany. Teraz konsument może pobrać produkt.
+\end{flushleft}
+\end{figure}
+
+\begin{figure}[H]
+\caption{Konsument powiadamia producenta}
+\centering
+\includegraphics[scale=0.36]{Screenshots/producer_wait_notify.png}\\
+\begin{flushleft}
+\qquad Konsument właśnie pobrał element z pełnego bufora i powiadamia o tym konsumenta, który został zatrzymany. Teraz producent może dodać produkt.
+\end{flushleft}
+
+\caption{Zakleszczenie}
+\includegraphics[scale=0.36]{Screenshots/notify_error.png}\\
+\begin{flushleft}
+\qquad Przed uruchomieniem tego programu zostały zakomentowane linijki kodu \pythoninline{#condition.notify()} w obu klasach. Konsument chciał pobrać element, ale bufor był pusty, więc został zatrzymany. Producent dodając kolejne elementy nie powiadamiał konsumenta, więc bufor szybko się zapełnił. Przy próbie dodania do pełnego bufora on też został zatrzymany. Doszło do zakleszczenia.
+\end{flushleft}
+
+
+\end{figure}
+
+\begin{figure}[H]
+\centering
+
+\caption{Ekran początkowy}
+\includegraphics[scale=0.36]{Screenshots/start.png}
+\begin{flushleft}
+\qquad Te i inne przypadki można obejrzeć na żywo podczas wykonywania programu.
+\end{flushleft}
+\end{figure}
+
+
+
+\section{Użyte technologie}
+
+
+\qquad Program został napisany w języku Python. To dynamiczny obiektowy język programistyczny, rozprowadzany na otwartej licencji umożliwiającej zastosowanie go do zamkniętych komercyjnych projektów. Python jest aktywnie rozwijany i posiada szerokie grono użytkowników na całym świecie i jest jednym z najpopularniejszych języków według różnego rodzaju metryk mierzących ilość tworzonych projektów, bibliotek i preferencji programistów. 
+
+Dodatkowym atutem jest wiele przewodników, jak i dodatkowych bibliotek, czy narzędzi ułatwiających programowanie w tym języku. 
+
+Graficzny interfejs programu opiera się na bibliotece Pygame.
+To stworzona przez Pete Shinnersa biblioteka przeznaczona do tworzenia gier komputerowych oraz aplikacji multimedialnych w języku Python. Do działania wymaga biblioteki SDL, przy wykorzystaniu której dostarcza modułów pozwalających na wyświetlanie grafiki, odtwarzanie dźwięków, śledzenie czasu, obsługę myszy i joysticka, obsługę CD, czy renderowanie czcionek TTF. 
+
+Pygame jako nakładka na SDL jest wieloplatformowa i umożliwia pracę na różnych systemach operacyjnych m.in. na Windows, Linux, MacOS. Biblioteka Pygame stanowi wolne oprogramowanie i jest dystrybuowana na zasadach licencji LGPL. 
+
+\newpage
+\section{Podsumowanie i wnioski końcowe}
+\qquad Aplikacja w sposób czytelny i przyswajalny prezentuje zagadnienia związane z synchronizacją i współbieżnością. Są to zagadnienia skomplikowane, jednak dzięki wizualnej reprezentacji bardziej przyswajalne. 
+
+Rozwojem programu może być wprowadzenie trybu interaktywnego, w którym użytkownik ręcznie steruje producentem lub konsumentem. Wtedy należałoby posiąść głębsze zrozumienie problemu, aby własnoręcznie sterować powiadamianiem, czekaniem i blokowaniem zasobów. 
+
+Kolejnymi krokami byłoby zrealizowanie w podobny sposób innych znanych problemów synchronizacyjnych takich jak problem pisarzy i czytelników, czy problem pięciu filozofów.
+
+
+\end{document}
