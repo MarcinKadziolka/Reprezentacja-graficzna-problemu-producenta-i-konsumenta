@@ -11,6 +11,58 @@ from threading import Thread, Condition
 import time
 import random
 
+"""
+ start()
+
+    Start the thread’s activity.
+
+    It must be called at most once per thread object.
+    It arranges for the object’s run() method to be invoked in a separate thread of control.
+
+
+ run()
+
+    Method representing the thread’s activity.
+
+    You may override this method in a subclass. The standard run() method invokes the callable object passed to the object’s constructor as the target argument, if any, with positional and keyword arguments taken from the args and kwargs arguments, respectively.
+
+ acquire(blocking=True, timeout=-1)
+
+    Acquire a lock, blocking or non-blocking.
+
+    When invoked with the blocking argument set to True (the default), block until the lock is unlocked, then set it to locked and return True.
+
+
+ release()
+
+    Release a lock. This can be called from any thread, not only the thread which has acquired the lock.
+
+    When the lock is locked, reset it to unlocked, and return.
+    If any other threads are blocked waiting for the lock to become unlocked, allow exactly one of them to proceed.
+
+
+ class threading.Condition(lock=None)
+
+    This class implements condition variable objects. A condition variable allows one or more threads to wait until they are notified by another thread.
+
+
+ wait(timeout=None)
+
+    Wait until notified or until a timeout occurs. If the calling thread has not acquired the lock when this method is called, a RuntimeError is raised.
+
+    This method releases the underlying lock,
+    and then blocks until it is awakened by a notify() or notify_all() call for the same condition variable in another thread,
+    or until the optional timeout occurs.
+    Once awakened or timed out, it re-acquires the lock and returns.
+
+ notify(n=1)
+
+    By default, wake up one thread waiting on this condition, if any. If the calling thread has not acquired the lock when this method is called, a RuntimeError is raised.
+
+    This method wakes up at most n of the threads waiting for the condition variable; it is a no-op if no threads are waiting.
+
+
+"""
 
 
 ######################## VARIABLES ########################
@@ -348,7 +400,8 @@ class ProducerThread(Thread):
             producer.count_buffor()
 
             # Zablokowanie dostępu innym wątkom do sekcji
-            condition.acquire() 
+            condition.acquire()
+            
             producer.acquire()
             
             
@@ -357,8 +410,10 @@ class ProducerThread(Thread):
                 print ("buffer full, producer is waiting")
                 # Jeśli jest, wstrzymanie wątku aż do czasu otrzymania powiadomienia
                 # od konsumenta o tym, że pobrał element i można dodać kolejny
+                
                 producer.wait()
                 condition.wait()
+                
                 print ("Space in buffer, Consumer notified the producer")
 
             # Produkowanie losowej liczby i przypisanie jej do obiektu graficznego
@@ -374,6 +429,7 @@ class ProducerThread(Thread):
 
             # Powiadomienie konsumenta o tym, że w buforze znajduje się
             # produkt
+
             producer.notify()
             condition.notify()
 
@@ -406,8 +462,10 @@ class ConsumerThread(Thread):
                 # Jeśli jest, wstrzymanie wątku aż do czasu
                 # otrzymania powiadomienia od producenta o tym,
                 # że dodał element i można go pobrać
+
                 consumer.wait()
                 condition.wait()
+                
                 print ("Producer added something to buffer and notified the consumer")
                 
             
@@ -418,8 +476,10 @@ class ConsumerThread(Thread):
             num = buffer.pop(0)
             
             
+            
             # Powiadomienie producenta o tym
             # że w buforze znajduje się miejsce
+
             consumer.notify()
             condition.notify()
 
